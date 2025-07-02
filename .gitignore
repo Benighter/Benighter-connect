@@ -118,3 +118,5 @@ Thumbs.db
 livekit-server/
 *.key
 *.pem
+
+.vercel

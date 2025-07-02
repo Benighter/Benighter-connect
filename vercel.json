@@ -1,31 +1,17 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "public/**/*",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/preview",
-      "dest": "/public/preview.html"
+      "source": "/preview",
+      "destination": "/preview.html"
     },
     {
-      "src": "/room/(.*)",
-      "dest": "/public/room.html"
+      "source": "/room/(.*)",
+      "destination": "/room.html"
     },
     {
-      "src": "/about",
-      "dest": "/public/about.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
-    },
-    {
-      "src": "/",
-      "dest": "/public/index.html"
+      "source": "/about",
+      "destination": "/about.html"
     }
   ]
 }
