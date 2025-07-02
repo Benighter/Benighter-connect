@@ -20,6 +20,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 const rooms = new Map();
 // Store room passwords
 const roomPasswords = new Map();
+// Store room hosts (first person to join becomes host)
+const roomHosts = new Map();
 
 console.log('Server starting...');
 
@@ -59,18 +61,22 @@ io.on('connection', (socket) => {
     // Initialize room if it doesn't exist
     if (!rooms.has(roomId)) {
       rooms.set(roomId, new Set());
+      // First person to join becomes the host
+      roomHosts.set(roomId, socket.id);
     }
 
     // Add user to room
     rooms.get(roomId).add({
       id: socket.id,
-      name: userName
+      name: userName,
+      isHost: roomHosts.get(roomId) === socket.id
     });
 
     // Notify others in the room
     socket.to(roomId).emit('user-joined', {
       id: socket.id,
-      name: userName
+      name: userName,
+      isHost: roomHosts.get(roomId) === socket.id
     });
 
     // Send current participants to new user
@@ -246,6 +252,7 @@ io.on('connection', (socket) => {
       if (room.size === 0) {
         rooms.delete(socket.roomId);
         roomPasswords.delete(socket.roomId);
+        roomHosts.delete(socket.roomId);
       }
     }
   });

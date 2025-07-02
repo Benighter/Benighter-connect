@@ -652,8 +652,17 @@
             updateParticipantCount();
         });
 
-        socket.on('room-participants', (participantList) => {
+        socket.on('room-participants', async (participantList) => {
             participants = participantList;
+
+            // Create peer connections with existing users (excluding self)
+            for (const participant of participantList) {
+                if (participant.id !== socket.id && !peerConnections[participant.id]) {
+                    console.log('🔗 Creating peer connection with existing user:', participant.name);
+                    await createPeerConnection(participant.id);
+                }
+            }
+
             updateParticipantCount(participantList.length);
             updateParticipantsList();
         });
@@ -1095,6 +1104,9 @@
             participantsList.innerHTML = '';
 
             // Add current user first
+            const currentUser = participants.find(p => p.id === socket.id);
+            const isCurrentUserHost = currentUser && currentUser.isHost;
+
             const currentUserItem = document.createElement('div');
             currentUserItem.className = 'participant-item';
             currentUserItem.innerHTML = `
@@ -1102,7 +1114,7 @@
                     <div class="participant-avatar">${userName.charAt(0).toUpperCase()}</div>
                     <div>
                         <div class="participant-name">${userName} (You)</div>
-                        <div class="participant-status">Host</div>
+                        <div class="participant-status">${isCurrentUserHost ? 'Host' : 'Participant'}</div>
                     </div>
                 </div>
             `;
@@ -1118,7 +1130,7 @@
                             <div class="participant-avatar">${participant.name.charAt(0).toUpperCase()}</div>
                             <div>
                                 <div class="participant-name">${participant.name}</div>
-                                <div class="participant-status">Participant</div>
+                                <div class="participant-status">${participant.isHost ? 'Host' : 'Participant'}</div>
                             </div>
                         </div>
                         <button class="chat-btn" onclick="startPrivateChat('${participant.id}', '${participant.name}')">Chat</button>
