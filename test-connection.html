@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Connection</title>
+</head>
+<body>
+    <h1>Testing Backend Connection</h1>
+    <div id="status">Connecting...</div>
+    <div id="logs"></div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const CONFIG = {
+          BACKEND_URL: 'https://benighter-connect-backend.onrender.com',
+          DEV_BACKEND_URL: 'http://localhost:3002',
+          getBackendUrl: function() {
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+              return this.BACKEND_URL;
+            }
+            return this.DEV_BACKEND_URL;
+          }
+        };
+
+        const statusDiv = document.getElementById('status');
+        const logsDiv = document.getElementById('logs');
+
+        function log(message) {
+            console.log(message);
+            logsDiv.innerHTML += '<p>' + message + '</p>';
+        }
+
+        log('Attempting to connect to: ' + CONFIG.getBackendUrl());
+        
+        const socket = io(CONFIG.getBackendUrl());
+
+        socket.on('connect', () => {
+            statusDiv.innerHTML = 'Connected!';
+            statusDiv.style.color = 'green';
+            log('Socket connected: ' + socket.id);
+            
+            // Test room creation
+            const testRoomId = 'TEST123';
+            log('Testing room creation: ' + testRoomId);
+            socket.emit('create-room', testRoomId, 'TestUser', 'testpass');
+        });
+
+        socket.on('connect_error', (error) => {
+            statusDiv.innerHTML = 'Connection Error!';
+            statusDiv.style.color = 'red';
+            log('Connection error: ' + error.message);
+        });
+
+        socket.on('room-created', (roomId) => {
+            log('Room created successfully: ' + roomId);
+            
+            // Test room validation
+            log('Testing room validation: ' + roomId);
+            socket.emit('validate-room', roomId);
+        });
+
+        socket.on('room-valid', () => {
+            log('Room validation successful!');
+        });
+
+        socket.on('room-invalid', () => {
+            log('Room validation failed!');
+        });
+
+        socket.on('disconnect', () => {
+            statusDiv.innerHTML = 'Disconnected';
+            statusDiv.style.color = 'orange';
+            log('Socket disconnected');
+        });
+    </script>
+</body>
+</html>
