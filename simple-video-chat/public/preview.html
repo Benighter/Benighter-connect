@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benighter Connect - Meeting Preview</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎥</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .preview-container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            height: 100vh;
+            gap: 0;
+        }
+
+        .video-preview {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            background: #1f2937;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            aspect-ratio: 16/9;
+            background: #111827;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            border: 2px solid #374151;
+        }
+
+        #previewVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-overlay {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-name {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+            color: white;
+        }
+
+        .preview-controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .control-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+        }
+
+        .control-btn.active {
+            background: #3b82f6;
+        }
+
+        .control-btn.inactive {
+            background: #ef4444;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .settings-panel {
+            background: #374151;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #4b5563;
+        }
+
+        .panel-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+        }
+
+        .brand-name {
+            color: #3b82f6;
+            font-weight: 700;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #e5e7eb;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            background: #4b5563;
+            border: 1px solid #6b7280;
+            border-radius: 6px;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .password-section {
+            background: #4b5563;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .password-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #6b7280;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle-switch.active {
+            background: #3b82f6;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(20px);
+        }
+
+        .password-input-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .generate-btn {
+            background: #059669;
+            border: none;
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background 0.2s;
+        }
+
+        .generate-btn:hover {
+            background: #047857;
+        }
+
+        .device-settings {
+            margin-bottom: 2rem;
+        }
+
+        .device-group {
+            margin-bottom: 1rem;
+        }
+
+        .device-select {
+            width: 100%;
+            padding: 0.5rem;
+            background: #4b5563;
+            border: 1px solid #6b7280;
+            border-radius: 6px;
+            color: white;
+            font-size: 0.875rem;
+        }
+
+        .join-section {
+            margin-top: auto;
+        }
+
+        .join-btn {
+            width: 100%;
+            background: #3b82f6;
+            border: none;
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 1rem;
+        }
+
+        .join-btn:hover {
+            background: #2563eb;
+        }
+
+        .join-btn:disabled {
+            background: #6b7280;
+            cursor: not-allowed;
+        }
+
+        .back-btn {
+            width: 100%;
+            background: transparent;
+            border: 1px solid #6b7280;
+            color: #9ca3af;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            border-color: #9ca3af;
+            color: white;
+        }
+
+        .error-message {
+            background: #fca5a5;
+            color: #991b1b;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .no-video {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #9ca3af;
+        }
+
+        .no-video-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <!-- Video Preview Section -->
+        <div class="video-preview">
+            <div class="video-container">
+                <video id="previewVideo" autoplay muted></video>
+                <div id="noVideoPlaceholder" class="no-video" style="display: none;">
+                    <div class="no-video-icon">📹</div>
+                    <p>Camera is off</p>
+                </div>
+                <div class="video-overlay">
+                    <div class="user-name" id="previewUserName">You</div>
+                    <div class="preview-controls">
+                        <button class="control-btn active" id="videoToggle" onclick="toggleVideo()">📹</button>
+                        <button class="control-btn active" id="audioToggle" onclick="toggleAudio()">🎤</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div class="settings-panel">
+            <div class="panel-header">
+                <div class="logo">
+                    <div class="logo-icon">🎥</div>
+                    <span><span class="brand-name">Benighter</span> Connect</span>
+                </div>
+                <h2>Ready to join?</h2>
+            </div>
+
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+            <div class="form-group">
+                <label class="form-label" for="userName">Your Name</label>
+                <input type="text" id="userName" class="form-input" placeholder="Enter your name">
+            </div>
+
+            <div class="password-section">
+                <div class="password-toggle">
+                    <div class="toggle-switch" id="passwordToggle" onclick="togglePasswordProtection()">
+                        <div class="toggle-slider"></div>
+                    </div>
+                    <label>Password protect meeting</label>
+                </div>
+                <div id="passwordInputGroup" class="password-input-group" style="display: none;">
+                    <input type="text" id="meetingPassword" class="form-input" placeholder="Meeting password" style="flex: 1;">
+                    <button class="generate-btn" onclick="generatePassword()">Generate</button>
+                </div>
+            </div>
+
+            <div class="device-settings">
+                <div class="device-group">
+                    <label class="form-label">Camera</label>
+                    <select id="cameraSelect" class="device-select"></select>
+                </div>
+                <div class="device-group">
+                    <label class="form-label">Microphone</label>
+                    <select id="microphoneSelect" class="device-select"></select>
+                </div>
+            </div>
+
+            <div class="join-section">
+                <button class="join-btn" id="joinButton" onclick="joinMeeting()">Join Meeting</button>
+                <button class="back-btn" onclick="goBack()">← Back to Home</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode'); // 'create' or 'join'
+        const roomId = urlParams.get('roomId');
+        const userName = urlParams.get('name') || '';
+
+        // Initialize Socket.IO
+        const socket = io();
+
+        // Media stream and settings
+        let previewStream = null;
+        let isVideoEnabled = true;
+        let isAudioEnabled = true;
+        let isPasswordProtected = false;
+        let availableCameras = [];
+        let availableMicrophones = [];
+
+        // Initialize preview
+        async function initPreview() {
+            try {
+                // Set initial name if provided
+                if (userName) {
+                    document.getElementById('userName').value = userName;
+                    document.getElementById('previewUserName').textContent = userName;
+                }
+
+                // Update UI based on mode
+                if (mode === 'create') {
+                    document.querySelector('h2').textContent = 'Create New Meeting';
+                    document.getElementById('joinButton').textContent = 'Create & Join Meeting';
+                } else {
+                    document.querySelector('h2').textContent = 'Join Meeting';
+                    document.getElementById('joinButton').textContent = 'Join Meeting';
+                    // Show password section for join mode but change label
+                    const passwordSection = document.querySelector('.password-section');
+                    passwordSection.innerHTML = `
+                        <label class="form-label">Meeting password (if required)</label>
+                        <div class="password-input-group" style="display: flex;">
+                            <input type="text" id="meetingPassword" class="form-input" placeholder="Enter password if required" style="flex: 1;">
+                        </div>
+                    `;
+                }
+
+                // Get user media
+                await getUserMedia();
+                
+                // Populate device lists
+                await populateDeviceList();
+
+                console.log('✅ Preview initialized successfully');
+            } catch (error) {
+                console.error('❌ Error initializing preview:', error);
+                showError('Could not access camera/microphone. Please check permissions.');
+            }
+        }
+
+        async function getUserMedia() {
+            try {
+                previewStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+
+                document.getElementById('previewVideo').srcObject = previewStream;
+                updateVideoDisplay();
+            } catch (error) {
+                console.error('Error accessing media devices:', error);
+                throw error;
+            }
+        }
+
+        async function populateDeviceList() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                
+                const cameraSelect = document.getElementById('cameraSelect');
+                const microphoneSelect = document.getElementById('microphoneSelect');
+                
+                // Clear existing options
+                cameraSelect.innerHTML = '';
+                microphoneSelect.innerHTML = '';
+
+                devices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.textContent = device.label || `${device.kind} ${device.deviceId.substr(0, 5)}`;
+
+                    if (device.kind === 'videoinput') {
+                        availableCameras.push(device);
+                        cameraSelect.appendChild(option);
+                    } else if (device.kind === 'audioinput') {
+                        availableMicrophones.push(device);
+                        microphoneSelect.appendChild(option);
+                    }
+                });
+
+                // Add event listeners for device changes
+                cameraSelect.addEventListener('change', switchCamera);
+                microphoneSelect.addEventListener('change', switchMicrophone);
+
+            } catch (error) {
+                console.error('Error enumerating devices:', error);
+            }
+        }
+
+        async function switchCamera() {
+            const cameraSelect = document.getElementById('cameraSelect');
+            const selectedDeviceId = cameraSelect.value;
+
+            try {
+                // Stop current video track
+                if (previewStream) {
+                    previewStream.getVideoTracks().forEach(track => track.stop());
+                }
+
+                // Get new stream with selected camera
+                const newStream = await navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: selectedDeviceId },
+                    audio: true
+                });
+
+                // Replace video track
+                const videoTrack = newStream.getVideoTracks()[0];
+                const audioTrack = previewStream.getAudioTracks()[0];
+                
+                previewStream = new MediaStream([videoTrack, audioTrack]);
+                document.getElementById('previewVideo').srcObject = previewStream;
+                
+                updateVideoDisplay();
+            } catch (error) {
+                console.error('Error switching camera:', error);
+                showError('Could not switch camera');
+            }
+        }
+
+        async function switchMicrophone() {
+            const microphoneSelect = document.getElementById('microphoneSelect');
+            const selectedDeviceId = microphoneSelect.value;
+
+            try {
+                // Stop current audio track
+                if (previewStream) {
+                    previewStream.getAudioTracks().forEach(track => track.stop());
+                }
+
+                // Get new stream with selected microphone
+                const newStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: { deviceId: selectedDeviceId }
+                });
+
+                // Replace audio track
+                const videoTrack = previewStream.getVideoTracks()[0];
+                const audioTrack = newStream.getAudioTracks()[0];
+                
+                previewStream = new MediaStream([videoTrack, audioTrack]);
+                document.getElementById('previewVideo').srcObject = previewStream;
+                
+            } catch (error) {
+                console.error('Error switching microphone:', error);
+                showError('Could not switch microphone');
+            }
+        }
+
+        function toggleVideo() {
+            if (previewStream) {
+                const videoTrack = previewStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    isVideoEnabled = !isVideoEnabled;
+                    videoTrack.enabled = isVideoEnabled;
+                    updateVideoDisplay();
+                }
+            }
+        }
+
+        function toggleAudio() {
+            if (previewStream) {
+                const audioTrack = previewStream.getAudioTracks()[0];
+                if (audioTrack) {
+                    isAudioEnabled = !isAudioEnabled;
+                    audioTrack.enabled = isAudioEnabled;
+                    updateAudioDisplay();
+                }
+            }
+        }
+
+        function updateVideoDisplay() {
+            const videoToggle = document.getElementById('videoToggle');
+            const previewVideo = document.getElementById('previewVideo');
+            const noVideoPlaceholder = document.getElementById('noVideoPlaceholder');
+
+            if (isVideoEnabled) {
+                videoToggle.className = 'control-btn active';
+                previewVideo.style.display = 'block';
+                noVideoPlaceholder.style.display = 'none';
+            } else {
+                videoToggle.className = 'control-btn inactive';
+                previewVideo.style.display = 'none';
+                noVideoPlaceholder.style.display = 'flex';
+            }
+        }
+
+        function updateAudioDisplay() {
+            const audioToggle = document.getElementById('audioToggle');
+            audioToggle.className = isAudioEnabled ? 'control-btn active' : 'control-btn inactive';
+            audioToggle.textContent = isAudioEnabled ? '🎤' : '🔇';
+        }
+
+        function togglePasswordProtection() {
+            const toggle = document.getElementById('passwordToggle');
+            const inputGroup = document.getElementById('passwordInputGroup');
+            
+            isPasswordProtected = !isPasswordProtected;
+            
+            if (isPasswordProtected) {
+                toggle.classList.add('active');
+                inputGroup.style.display = 'flex';
+            } else {
+                toggle.classList.remove('active');
+                inputGroup.style.display = 'none';
+            }
+        }
+
+        function generatePassword() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let password = '';
+            for (let i = 0; i < 6; i++) {
+                password += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById('meetingPassword').value = password;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+
+            // Auto-hide after 8 seconds
+            setTimeout(() => {
+                hideError();
+            }, 8000);
+        }
+
+        function hideError() {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.style.display = 'none';
+        }
+
+        function validateForm() {
+            const name = document.getElementById('userName').value.trim();
+            const password = document.getElementById('meetingPassword').value.trim();
+
+            // Clear previous errors
+            hideError();
+
+            // Validate name
+            if (!name) {
+                showError('Please enter your name');
+                return false;
+            }
+
+            if (name.length < 2) {
+                showError('Name must be at least 2 characters long');
+                return false;
+            }
+
+            if (name.length > 50) {
+                showError('Name must be less than 50 characters');
+                return false;
+            }
+
+            // Validate name contains only letters, numbers, spaces, and basic punctuation
+            if (!/^[a-zA-Z0-9\s\-_.]+$/.test(name)) {
+                showError('Name can only contain letters, numbers, spaces, hyphens, underscores, and periods');
+                return false;
+            }
+
+            if (mode === 'join' && !roomId) {
+                showError('Invalid room ID');
+                return false;
+            }
+
+            // Validate room ID format for join mode
+            if (mode === 'join' && roomId && !/^[A-Z0-9]{6}$/.test(roomId)) {
+                showError('Invalid room ID format');
+                return false;
+            }
+
+            // Validate password for create mode
+            if (mode === 'create' && isPasswordProtected) {
+                if (!password) {
+                    showError('Please enter a password or turn off password protection');
+                    return false;
+                }
+
+                if (password.length < 3) {
+                    showError('Password must be at least 3 characters long');
+                    return false;
+                }
+
+                if (password.length > 20) {
+                    showError('Password must be less than 20 characters');
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function joinMeeting() {
+            if (!validateForm()) return;
+
+            const name = document.getElementById('userName').value.trim();
+            const password = document.getElementById('meetingPassword').value.trim();
+
+            // Store media settings for the room
+            sessionStorage.setItem('previewVideoEnabled', isVideoEnabled);
+            sessionStorage.setItem('previewAudioEnabled', isAudioEnabled);
+
+            // Disable join button to prevent multiple clicks
+            const joinButton = document.getElementById('joinButton');
+            joinButton.disabled = true;
+            joinButton.textContent = 'Joining...';
+
+            if (mode === 'create') {
+                // Generate room ID and create room with password
+                const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+                if (isPasswordProtected && password) {
+                    // Create password-protected room
+                    socket.emit('create-room', newRoomId, password);
+                    socket.once('room-created', () => {
+                        window.location.href = `/room/${newRoomId}?name=${encodeURIComponent(name)}&password=${encodeURIComponent(password)}`;
+                    });
+                } else {
+                    // Create room without password
+                    window.location.href = `/room/${newRoomId}?name=${encodeURIComponent(name)}`;
+                }
+            } else {
+                // Join existing room - redirect to room page which will handle password validation
+                const passwordParam = password ? `&password=${encodeURIComponent(password)}` : '';
+                window.location.href = `/room/${roomId}?name=${encodeURIComponent(name)}${passwordParam}`;
+            }
+        }
+
+        function goBack() {
+            // Stop media stream before leaving
+            if (previewStream) {
+                previewStream.getTracks().forEach(track => track.stop());
+            }
+            window.location.href = '/';
+        }
+
+        // Update name display when typing and validate
+        document.getElementById('userName').addEventListener('input', function() {
+            const name = this.value.trim() || 'You';
+            document.getElementById('previewUserName').textContent = name;
+
+            // Real-time validation
+            if (this.value.trim() && this.value.trim().length >= 2) {
+                hideError();
+            }
+        });
+
+        // Add input validation for password
+        document.getElementById('meetingPassword').addEventListener('input', function() {
+            if (mode === 'create' && isPasswordProtected && this.value.trim().length >= 3) {
+                hideError();
+            }
+        });
+
+        // Initialize when page loads
+        window.addEventListener('load', initPreview);
+
+        // Cleanup when leaving page
+        window.addEventListener('beforeunload', () => {
+            if (previewStream) {
+                previewStream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
