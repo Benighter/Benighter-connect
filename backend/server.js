@@ -127,15 +127,29 @@ io.on('connection', (socket) => {
 
   // Handle WebRTC signaling
   socket.on('offer', (offer, targetId) => {
-    socket.to(targetId).emit('offer', offer, socket.id);
+    console.log(`📤 Received offer from ${socket.id}, relaying to ${data.target}`);
+    console.log(`📋 Offer data:`, data);
+    socket.to(data.target).emit('offer', {
+      offer: data.offer,
+      sender: socket.id
+    });
   });
 
-  socket.on('answer', (answer, targetId) => {
-    socket.to(targetId).emit('answer', answer, socket.id);
+  socket.on('answer', (data) => {
+    console.log(`📤 Received answer from ${socket.id}, relaying to ${data.target}`);
+    console.log(`📋 Answer data:`, data);
+    socket.to(data.target).emit('answer', {
+      answer: data.answer,
+      sender: socket.id
+    });
   });
 
-  socket.on('ice-candidate', (candidate, targetId) => {
-    socket.to(targetId).emit('ice-candidate', candidate, socket.id);
+  socket.on('ice-candidate', (data) => {
+    console.log(`🧊 Received ICE candidate from ${socket.id}, relaying to ${data.target}`);
+    socket.to(data.target).emit('ice-candidate', {
+      candidate: data.candidate,
+      sender: socket.id
+    });
   });
 
   // Chat messages
