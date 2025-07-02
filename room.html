@@ -642,6 +642,16 @@
             updateParticipantCount();
         });
 
+        // Handle current users when joining a room
+        socket.on('current-users', async (userIds) => {
+            console.log('👥 Current users in room:', userIds);
+            // Create peer connections with all existing users
+            for (const userId of userIds) {
+                await createPeerConnection(userId);
+            }
+            updateParticipantCount();
+        });
+
         socket.on('room-participants', (participantList) => {
             participants = participantList;
             updateParticipantCount(participantList.length);

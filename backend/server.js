@@ -82,7 +82,7 @@ io.on('connection', (socket) => {
     console.log(`${userName} joined room ${roomId}`);
     
     // Notify others in the room
-    socket.to(roomId).emit('user-connected', socket.id, userName);
+    socket.to(roomId).emit('user-joined', { id: socket.id, name: userName });
     
     // Send current users to the new user
     const currentUsers = Array.from(room).filter(id => id !== socket.id);
@@ -190,7 +190,7 @@ io.on('connection', (socket) => {
           console.log(`Room ${socket.roomId} deleted (empty)`);
         } else {
           // Notify others in the room
-          socket.to(socket.roomId).emit('user-disconnected', socket.id);
+          socket.to(socket.roomId).emit('user-left', socket.id);
         }
       }
     }
