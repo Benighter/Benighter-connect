@@ -742,8 +742,10 @@
         // Create peer connection
         async function createPeerConnection(userId) {
             console.log('🔄 Creating peer connection for user:', userId);
-            const peerConnection = new RTCPeerConnection(configuration);
-            peerConnections[userId] = peerConnection;
+
+            try {
+                const peerConnection = new RTCPeerConnection(configuration);
+                peerConnections[userId] = peerConnection;
 
             // Add local stream to peer connection
             localStream.getTracks().forEach(track => {
@@ -790,9 +792,12 @@
                 }
             };
 
-            // Only create offer if our socket ID is greater than the target user ID
-            // This prevents both sides from creating offers simultaneously (glare condition)
-            if (socket.id > userId) {
+            // Determine who should create the offer using a more reliable method
+            // Use string comparison of socket IDs to ensure consistent ordering
+            const shouldCreateOffer = socket.id.localeCompare(userId) > 0;
+            console.log('🔍 Offer decision - My ID:', socket.id, 'Target ID:', userId, 'Should I create offer:', shouldCreateOffer);
+
+            if (shouldCreateOffer) {
                 console.log('📤 Creating offer for user (we are caller):', userId);
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
@@ -805,6 +810,26 @@
                 console.log('📋 Offer details:', { offer, target: userId });
             } else {
                 console.log('⏳ Waiting for offer from user (they are caller):', userId);
+
+                // Add a timeout to create offer if we don't receive one within 5 seconds
+                setTimeout(async () => {
+                    if (peerConnection.connectionState === 'new' || peerConnection.connectionState === 'connecting') {
+                        console.log('⏰ Timeout reached, creating offer anyway for user:', userId);
+                        const offer = await peerConnection.createOffer();
+                        await peerConnection.setLocalDescription(offer);
+
+                        socket.emit('offer', {
+                            offer: offer,
+                            target: userId
+                        });
+                        console.log('✅ Timeout offer sent to user:', userId);
+                    }
+                }, 5000);
+            }
+
+            } catch (error) {
+                console.error('❌ Error creating peer connection for user:', userId, error);
+                throw error;
             }
         }
 
