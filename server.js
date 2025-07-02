@@ -117,6 +117,7 @@ io.on('connection', (socket) => {
 
   // Handle WebRTC signaling
   socket.on('offer', (data) => {
+    console.log(`📤 Relaying offer from ${socket.id} to ${data.target}`);
     socket.to(data.target).emit('offer', {
       offer: data.offer,
       sender: socket.id
@@ -124,6 +125,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('answer', (data) => {
+    console.log(`📤 Relaying answer from ${socket.id} to ${data.target}`);
     socket.to(data.target).emit('answer', {
       answer: data.answer,
       sender: socket.id

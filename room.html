@@ -627,7 +627,8 @@
 
         // Socket event handlers
         socket.on('user-joined', async (user) => {
-            console.log('👤 User joined:', user.name);
+            console.log('👤 User joined:', user.name, 'ID:', user.id);
+            console.log('🔗 Creating peer connection for user:', user.id);
             await createPeerConnection(user.id);
             updateParticipantCount();
         });
@@ -653,12 +654,13 @@
         });
 
         socket.on('room-participants', async (participantList) => {
+            console.log('📋 Received room participants:', participantList);
             participants = participantList;
 
             // Create peer connections with existing users (excluding self)
             for (const participant of participantList) {
                 if (participant.id !== socket.id && !peerConnections[participant.id]) {
-                    console.log('🔗 Creating peer connection with existing user:', participant.name);
+                    console.log('🔗 Creating peer connection with existing user:', participant.name, 'ID:', participant.id);
                     await createPeerConnection(participant.id);
                 }
             }
@@ -675,14 +677,17 @@
 
         // WebRTC signaling
         socket.on('offer', async (data) => {
+            console.log('📥 Received offer from:', data.sender);
             await handleOffer(data.offer, data.sender);
         });
 
         socket.on('answer', async (data) => {
+            console.log('📥 Received answer from:', data.sender);
             await handleAnswer(data.answer, data.sender);
         });
 
         socket.on('ice-candidate', async (data) => {
+            console.log('🧊 Received ICE candidate from:', data.sender);
             await handleIceCandidate(data.candidate, data.sender);
         });
 
@@ -703,16 +708,19 @@
 
         // Create peer connection
         async function createPeerConnection(userId) {
+            console.log('🔄 Creating peer connection for user:', userId);
             const peerConnection = new RTCPeerConnection(configuration);
             peerConnections[userId] = peerConnection;
 
             // Add local stream to peer connection
             localStream.getTracks().forEach(track => {
+                console.log('➕ Adding track to peer connection:', track.kind);
                 peerConnection.addTrack(track, localStream);
             });
 
             // Handle remote stream
             peerConnection.ontrack = (event) => {
+                console.log('📺 Received remote stream from user:', userId);
                 const remoteStream = event.streams[0];
                 addVideoElement(userId, remoteStream);
             };
@@ -720,6 +728,7 @@
             // Handle ICE candidates
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
+                    console.log('🧊 Sending ICE candidate to:', userId);
                     socket.emit('ice-candidate', {
                         candidate: event.candidate,
                         target: userId
@@ -728,6 +737,7 @@
             };
 
             // Create and send offer
+            console.log('📤 Creating offer for user:', userId);
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
 
@@ -735,21 +745,26 @@
                 offer: offer,
                 target: userId
             });
+            console.log('✅ Offer sent to user:', userId);
         }
 
         // Handle incoming offer
         async function handleOffer(offer, senderId) {
+            console.log('🔧 Handling offer from:', senderId);
             if (!peerConnections[senderId]) {
+                console.log('🔄 Creating new peer connection for offer from:', senderId);
                 const peerConnection = new RTCPeerConnection(configuration);
                 peerConnections[senderId] = peerConnection;
 
                 // Add local stream
                 localStream.getTracks().forEach(track => {
+                    console.log('➕ Adding track to peer connection for offer:', track.kind);
                     peerConnection.addTrack(track, localStream);
                 });
 
                 // Handle remote stream
                 peerConnection.ontrack = (event) => {
+                    console.log('📺 Received remote stream in offer handler from:', senderId);
                     const remoteStream = event.streams[0];
                     addVideoElement(senderId, remoteStream);
                 };
@@ -757,6 +772,7 @@
                 // Handle ICE candidates
                 peerConnection.onicecandidate = (event) => {
                     if (event.candidate) {
+                        console.log('🧊 Sending ICE candidate in offer handler to:', senderId);
                         socket.emit('ice-candidate', {
                             candidate: event.candidate,
                             target: senderId
@@ -765,6 +781,7 @@
                 };
             }
 
+            console.log('🔧 Setting remote description and creating answer for:', senderId);
             await peerConnections[senderId].setRemoteDescription(offer);
             const answer = await peerConnections[senderId].createAnswer();
             await peerConnections[senderId].setLocalDescription(answer);
@@ -773,12 +790,17 @@
                 answer: answer,
                 target: senderId
             });
+            console.log('📤 Answer sent to:', senderId);
         }
 
         // Handle incoming answer
         async function handleAnswer(answer, senderId) {
+            console.log('🔧 Handling answer from:', senderId);
             if (peerConnections[senderId]) {
+                console.log('✅ Setting remote description for answer from:', senderId);
                 await peerConnections[senderId].setRemoteDescription(answer);
+            } else {
+                console.error('❌ No peer connection found for answer from:', senderId);
             }
         }
 
