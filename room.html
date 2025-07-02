@@ -558,16 +558,43 @@
         const socket = io(CONFIG.getBackendUrl(), {
             transports: ['websocket', 'polling'],
             timeout: 20000,
-            forceNew: true
+            forceNew: true,
+            reconnection: true,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000
         });
 
-        // Socket.IO connection debugging
+        // Socket.IO connection debugging with reconnection handling
         socket.on('connect', () => {
             console.log('✅ Socket.IO connected successfully! Socket ID:', socket.id);
+
+            // If this is a reconnection, rejoin the room
+            if (currentRoomId && currentUserName) {
+                console.log('🔄 Reconnecting to room:', currentRoomId);
+                socket.emit('join-room', currentRoomId, currentUserName, roomPassword || '');
+            }
         });
 
         socket.on('disconnect', (reason) => {
             console.log('❌ Socket.IO disconnected:', reason);
+
+            // Close all peer connections on disconnect to prevent hanging connections
+            Object.keys(peerConnections).forEach(userId => {
+                if (peerConnections[userId]) {
+                    console.log('🔌 Closing peer connection for:', userId);
+                    peerConnections[userId].close();
+                    delete peerConnections[userId];
+                }
+            });
+
+            // Clear remote video elements but keep local video
+            const videoGrid = document.getElementById('video-grid');
+            if (videoGrid) {
+                const localVideo = document.getElementById('localVideo');
+                const remoteVideos = videoGrid.querySelectorAll('video:not(#localVideo)');
+                remoteVideos.forEach(video => video.remove());
+            }
         });
 
         socket.on('connect_error', (error) => {
@@ -600,6 +627,11 @@
         let isVideoEnabled = true;
         let isAudioEnabled = true;
         let isScreenSharing = false;
+
+        // Room and user info for reconnection
+        let currentRoomId = '';
+        let currentUserName = '';
+        let roomPassword = '';
 
         // Participants and chat state
         let participants = [];
@@ -644,6 +676,10 @@
 
                 // Set up initial grid layout
                 updateGridLayout();
+
+                // Store room info for reconnection
+                currentRoomId = roomId;
+                currentUserName = userName;
 
                 // Join the room
                 socket.emit('join-room', roomId, userName, roomPassword);
