@@ -23,6 +23,16 @@ const roomPasswords = new Map();
 
 console.log('Server starting...');
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Benighter Connect Backend',
+    status: 'running',
+    socketio: 'available at /socket.io/',
+    health: '/health'
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Benighter Connect Backend is running!' });
