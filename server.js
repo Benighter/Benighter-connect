@@ -13,8 +13,8 @@ const io = socketIo(server, {
   }
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static files from root directory
+app.use(express.static(__dirname));
 
 // Store rooms and participants
 const rooms = new Map();
@@ -27,15 +27,15 @@ console.log('Server starting...');
 
 // Routes
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.get('/preview', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'preview.html'));
+  res.sendFile(path.join(__dirname, 'preview.html'));
 });
 
 app.get('/room/:roomId', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'room.html'));
+  res.sendFile(path.join(__dirname, 'room.html'));
 });
 
 // Socket.IO connection handling
@@ -133,6 +133,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('ice-candidate', (data) => {
+    console.log(`🧊 Relaying ICE candidate from ${socket.id} to ${data.target}`);
     socket.to(data.target).emit('ice-candidate', {
       candidate: data.candidate,
       sender: socket.id

@@ -556,12 +556,16 @@
         // Initialize Socket.IO
         const socket = io(CONFIG.getBackendUrl());
 
-        // WebRTC configuration
+        // WebRTC configuration with multiple STUN servers
         const configuration = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' },
+                { urls: 'stun:stun4.l.google.com:19302' }
+            ],
+            iceCandidatePoolSize: 10
         };
 
         // Local stream and peer connections
@@ -733,24 +737,51 @@
                         candidate: event.candidate,
                         target: userId
                     });
+                } else {
+                    console.log('🧊 ICE gathering completed for:', userId);
                 }
             };
 
-            // Create and send offer
-            console.log('📤 Creating offer for user:', userId);
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
+            // Handle connection state changes
+            peerConnection.onconnectionstatechange = () => {
+                console.log(`🔗 Connection state with ${userId}:`, peerConnection.connectionState);
+                if (peerConnection.connectionState === 'failed') {
+                    console.error('❌ Connection failed with:', userId);
+                    // Attempt to restart ICE
+                    peerConnection.restartIce();
+                }
+            };
 
-            socket.emit('offer', {
-                offer: offer,
-                target: userId
-            });
-            console.log('✅ Offer sent to user:', userId);
+            // Handle ICE connection state changes
+            peerConnection.oniceconnectionstatechange = () => {
+                console.log(`🧊 ICE connection state with ${userId}:`, peerConnection.iceConnectionState);
+                if (peerConnection.iceConnectionState === 'failed') {
+                    console.error('❌ ICE connection failed with:', userId);
+                }
+            };
+
+            // Only create offer if our socket ID is greater than the target user ID
+            // This prevents both sides from creating offers simultaneously (glare condition)
+            if (socket.id > userId) {
+                console.log('📤 Creating offer for user (we are caller):', userId);
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                socket.emit('offer', {
+                    offer: offer,
+                    target: userId
+                });
+                console.log('✅ Offer sent to user:', userId);
+            } else {
+                console.log('⏳ Waiting for offer from user (they are caller):', userId);
+            }
         }
 
         // Handle incoming offer
         async function handleOffer(offer, senderId) {
             console.log('🔧 Handling offer from:', senderId);
+
+            // Check if we already have a peer connection
             if (!peerConnections[senderId]) {
                 console.log('🔄 Creating new peer connection for offer from:', senderId);
                 const peerConnection = new RTCPeerConnection(configuration);
@@ -777,28 +808,63 @@
                             candidate: event.candidate,
                             target: senderId
                         });
+                    } else {
+                        console.log('🧊 ICE gathering completed in offer handler for:', senderId);
+                    }
+                };
+
+                // Handle connection state changes
+                peerConnection.onconnectionstatechange = () => {
+                    console.log(`🔗 Connection state in offer handler with ${senderId}:`, peerConnection.connectionState);
+                    if (peerConnection.connectionState === 'failed') {
+                        console.error('❌ Connection failed in offer handler with:', senderId);
+                        // Attempt to restart ICE
+                        peerConnection.restartIce();
+                    }
+                };
+
+                // Handle ICE connection state changes
+                peerConnection.oniceconnectionstatechange = () => {
+                    console.log(`🧊 ICE connection state in offer handler with ${senderId}:`, peerConnection.iceConnectionState);
+                    if (peerConnection.iceConnectionState === 'failed') {
+                        console.error('❌ ICE connection failed in offer handler with:', senderId);
                     }
                 };
             }
 
-            console.log('🔧 Setting remote description and creating answer for:', senderId);
-            await peerConnections[senderId].setRemoteDescription(offer);
-            const answer = await peerConnections[senderId].createAnswer();
-            await peerConnections[senderId].setLocalDescription(answer);
+            // Check the signaling state before setting remote description
+            const pc = peerConnections[senderId];
+            console.log(`🔧 Peer connection signaling state: ${pc.signalingState}`);
 
-            socket.emit('answer', {
-                answer: answer,
-                target: senderId
-            });
-            console.log('📤 Answer sent to:', senderId);
+            if (pc.signalingState === 'stable' || pc.signalingState === 'have-local-offer') {
+                console.log('🔧 Setting remote description and creating answer for:', senderId);
+                await pc.setRemoteDescription(offer);
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+
+                socket.emit('answer', {
+                    answer: answer,
+                    target: senderId
+                });
+                console.log('📤 Answer sent to:', senderId);
+            } else {
+                console.warn('⚠️ Cannot set remote description, signaling state is:', pc.signalingState);
+            }
         }
 
         // Handle incoming answer
         async function handleAnswer(answer, senderId) {
             console.log('🔧 Handling answer from:', senderId);
             if (peerConnections[senderId]) {
-                console.log('✅ Setting remote description for answer from:', senderId);
-                await peerConnections[senderId].setRemoteDescription(answer);
+                const pc = peerConnections[senderId];
+                console.log(`🔧 Peer connection signaling state for answer: ${pc.signalingState}`);
+
+                if (pc.signalingState === 'have-local-offer') {
+                    console.log('✅ Setting remote description for answer from:', senderId);
+                    await pc.setRemoteDescription(answer);
+                } else {
+                    console.warn('⚠️ Cannot set remote answer, signaling state is:', pc.signalingState);
+                }
             } else {
                 console.error('❌ No peer connection found for answer from:', senderId);
             }
@@ -807,7 +873,15 @@
         // Handle ICE candidate
         async function handleIceCandidate(candidate, senderId) {
             if (peerConnections[senderId]) {
-                await peerConnections[senderId].addIceCandidate(candidate);
+                try {
+                    console.log('🧊 Adding ICE candidate from:', senderId);
+                    await peerConnections[senderId].addIceCandidate(candidate);
+                    console.log('✅ ICE candidate added successfully from:', senderId);
+                } catch (error) {
+                    console.error('❌ Error adding ICE candidate from:', senderId, error);
+                }
+            } else {
+                console.warn('⚠️ No peer connection found for ICE candidate from:', senderId);
             }
         }
 
