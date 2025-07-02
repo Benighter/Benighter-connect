@@ -2,15 +2,11 @@
   "version": 2,
   "builds": [
     {
-      "src": "public/**",
+      "src": "public/**/*",
       "use": "@vercel/static"
     }
   ],
   "routes": [
-    {
-      "src": "/config.js",
-      "dest": "/public/config.js"
-    },
     {
       "src": "/preview",
       "dest": "/public/preview.html"
@@ -24,7 +20,7 @@
       "dest": "/public/about.html"
     },
     {
-      "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|svg|ico))",
+      "src": "/(.*)",
       "dest": "/public/$1"
     },
     {
