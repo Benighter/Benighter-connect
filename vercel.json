@@ -2,26 +2,34 @@
   "version": 2,
   "builds": [
     {
-      "src": "server.js",
-      "use": "@vercel/node"
+      "src": "public/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/socket.io/(.*)",
-      "dest": "/server.js"
+      "src": "/config.js",
+      "dest": "/public/config.js"
     },
     {
       "src": "/preview",
-      "dest": "/server.js"
+      "dest": "/public/preview.html"
     },
     {
       "src": "/room/(.*)",
-      "dest": "/server.js"
+      "dest": "/public/room.html"
     },
     {
-      "src": "/(.*)",
-      "dest": "/server.js"
+      "src": "/about",
+      "dest": "/public/about.html"
+    },
+    {
+      "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|svg|ico))",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/public/index.html"
     }
   ]
 }
